@@ -70,11 +70,14 @@ func Module(opts ...Option) fx.Option {
 		fx.Provide(fx.Annotate(electrician.NewTypedPublisherFromEnv, fx.As(new(core.TypedPublisher)))),
 		fx.Provide(provideRelayClient),
 		// Router
-		fx.Provide(fx.Annotate(
-			provideRouter,
-			fx.ParamTags(``, ``, `name:"metrics"`, ``, ``, ``, ``), // a,lm,m,typed,rel,r,zl
-			fx.ResultTags(`name:"app"`),
-		)),
+		fx.Provide(
+			fx.Annotate(
+				provideRouter,
+				// params: cfg, a, lm, m(name:"metrics"), typed, rel, r, zl
+				fx.ParamTags(``, ``, ``, `name:"metrics"`, ``, ``, ``, ``),
+				fx.ResultTags(`name:"app"`),
+			),
+		),
 		// Lifecycle
 		fx.Invoke(registerHooks),
 	)

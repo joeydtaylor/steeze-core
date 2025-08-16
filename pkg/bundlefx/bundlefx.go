@@ -2,9 +2,9 @@
 package bundlefx
 
 import (
-	"github.com/joeydtaylor/steeze-core/middleware/auth"
-	"github.com/joeydtaylor/steeze-core/middleware/logger"
-	"github.com/joeydtaylor/steeze-core/middleware/metrics"
+	"github.com/joeydtaylor/steeze-core/pkg/middleware/auth"
+	"github.com/joeydtaylor/steeze-core/pkg/middleware/logger"
+	"github.com/joeydtaylor/steeze-core/pkg/middleware/metrics"
 	"go.uber.org/fx"
 )
 

@@ -1,4 +1,4 @@
-// pkg/electrician/builderpub.go
+// pkg/electrician/relay_builder_env.go
 package electrician
 
 // Publish-only RelayClient implemented with Electrician builder primitives.
@@ -13,39 +13,10 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/joeydtaylor/electrician/pkg/builder"
 )
-
-// RelayRequest is the byte-level publish/request envelope.
-type RelayRequest struct {
-	Topic   string
-	Body    []byte
-	Headers map[string]string
-	Timeout time.Duration
-}
-
-// RelayClient is the minimal interface the router needs.
-type RelayClient interface {
-	Request(ctx context.Context, rr RelayRequest) ([]byte, error)
-	Publish(ctx context.Context, rr RelayRequest) error
-}
-
-// noopRelay accepts publishes and discards them; Request is unsupported.
-type noopRelay struct{}
-
-func (noopRelay) Request(context.Context, RelayRequest) ([]byte, error) {
-	return nil, fmt.Errorf("electrician(noop): request/reply unsupported")
-}
-func (noopRelay) Publish(context.Context, RelayRequest) error { return nil }
-
-type builderClient struct {
-	once   sync.Once
-	start  error
-	submit func(context.Context, []byte) error // captures wire.Submit
-}
 
 // NewBuilderRelayFromEnv returns a publish-capable RelayClient
 // powered by Electrician's ForwardRelay[[]byte]. It expects:
@@ -195,47 +166,4 @@ func NewBuilderRelayFromEnv() (RelayClient, error) {
 		return nil, c.start
 	}
 	return c, nil
-}
-
-// Request is unsupported in builder mode (stream/publish only).
-func (c *builderClient) Request(ctx context.Context, rr RelayRequest) ([]byte, error) {
-	return nil, fmt.Errorf("electrician(builder): request/reply unsupported")
-}
-
-// Publish sends bytes into the pipeline. Topic/headers ride the relay path.
-func (c *builderClient) Publish(ctx context.Context, rr RelayRequest) error {
-	if rr.Topic == "" {
-		return fmt.Errorf("relay: missing topic")
-	}
-	if c.start != nil {
-		return c.start
-	}
-	return c.submit(ctx, rr.Body)
-}
-
-// --- small helpers ---
-
-func envOr(k, def string) string {
-	if v := os.Getenv(k); v != "" {
-		return v
-	}
-	return def
-}
-
-func parseKV(s string) map[string]string {
-	if s == "" {
-		return nil
-	}
-	out := map[string]string{}
-	for _, kv := range strings.Split(s, ",") {
-		kv = strings.TrimSpace(kv)
-		if kv == "" {
-			continue
-		}
-		p := strings.SplitN(kv, "=", 2)
-		if len(p) == 2 {
-			out[strings.TrimSpace(p[0])] = strings.TrimSpace(p[1])
-		}
-	}
-	return out
 }

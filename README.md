@@ -10,7 +10,6 @@
 
 ## ✨ Highlights
 
-* 🔌 **`serverfx`** — drop‑in Fx module that boots HTTP, receivers, and relays.
 * 🧩 **Manifest routing** — declarative TOML for routes + pipelines.
 * 🔐 **Secure defaults** — TLS 1.3 where applicable, structured logs, no secret echo.
 * 📈 **Observability** — logger + metrics middleware pre‑wired.
@@ -47,8 +46,6 @@
     /auth
     /logger
     /metrics
-  /serverfx
-    module.go
   /transport/httpx
     router.go
   /utils
@@ -63,12 +60,6 @@ go.sum
 
 **What lives where**
 
-* **`pkg/serverfx`** — Fx module that:
-
-  * loads the manifest, builds the router
-  * boots receivers from the manifest
-  * wires Electrician typed publisher + relay client
-  * starts HTTP with TLS(🤝 cert/key) or plaintext
 * **`pkg/core`** — router construction, credentials, guards, timeouts, helpers; transform registry.
 * **`pkg/electrician`** — typed pub, relay client, receiver→wire→sinks (S3/Kafka) with env‑driven config.
 * **`pkg/transport/httpx`** — router abstraction (default: Chi).
@@ -79,28 +70,6 @@ go.sum
 
 ## 🚀 Quickstart
 
-Minimal service using the shared bootstrap:
-
-```go
-package main
-
-import (
-    "github.com/joeydtaylor/steeze-core/pkg/serverfx"
-    "go.uber.org/fx"
-)
-
-func main() {
-    fx.New(
-        serverfx.Module(
-            serverfx.WithService("myservice"),
-            serverfx.WithManifestEnv("MYSERVICE_MANIFEST"),
-            serverfx.WithDefaultManifest("manifest.toml"),
-        ),
-        // App-specific registration
-        fx.Invoke(func() { /* types.RegisterAll(); handlers.Register() */ }),
-    ).Run()
-}
-```
 
 ### 📁 `manifest.toml` (example)
 
@@ -121,8 +90,6 @@ bufferSize = 1024
   dataType     = "com.example.Event"
   transformers = ["sanitize", "enrich"]
 ```
-
-`serverfx.Module` loads the manifest, builds the router, boots receivers, and wires the publisher/relay. You register only your domain types and handlers.
 
 ---
 

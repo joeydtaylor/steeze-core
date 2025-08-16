@@ -1,4 +1,4 @@
-// core/transform/registry.go
+// pkg/core/transform/registry.go
 package transform
 
 import (

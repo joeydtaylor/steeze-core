@@ -1,4 +1,4 @@
-// utils/wrap_response_writer.go
+// pkg/utils/wrap_response_writer.go
 package utils
 
 // The original work was derived from Goji's middleware, source:

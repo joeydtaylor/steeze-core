@@ -1,4 +1,4 @@
-// core/types_registry.go
+// pkg/core/types_registry.go
 package core
 
 import (

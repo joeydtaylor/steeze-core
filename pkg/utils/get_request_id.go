@@ -1,4 +1,4 @@
-// utils/get_request_id.go
+// pkg/utils/get_request_id.go
 package utils
 
 // Ported from Goji's middleware, source:

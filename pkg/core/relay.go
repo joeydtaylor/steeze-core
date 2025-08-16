@@ -1,4 +1,4 @@
-// core/relay.go
+// pkg/core/relay.go
 package core
 
 import "context"

@@ -1,4 +1,4 @@
-// core/publish_tf.go
+// pkg/core/publish_tf.go
 package core
 
 import (

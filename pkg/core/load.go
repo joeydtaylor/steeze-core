@@ -1,4 +1,4 @@
-// core/load.go
+// pkg/core/load.go
 package core
 
 import (

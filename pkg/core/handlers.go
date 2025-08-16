@@ -1,4 +1,4 @@
-// core/handlers.go
+// pkg/core/handlers.go
 package core
 
 import "context"

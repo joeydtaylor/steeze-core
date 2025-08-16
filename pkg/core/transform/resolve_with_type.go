@@ -1,4 +1,4 @@
-// core/transform/resolve_with_type.go
+// pkg/core/transform/resolve_with_type.go
 package transform
 
 import (

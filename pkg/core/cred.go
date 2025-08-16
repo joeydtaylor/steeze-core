@@ -1,4 +1,4 @@
-// core/cred.go
+// pkg/core/cred.go
 package core
 
 import (

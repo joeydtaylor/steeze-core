@@ -1,4 +1,3 @@
-// pkg/electrician/typedpub.go
 package electrician
 
 import (
@@ -17,44 +16,6 @@ import (
 	"github.com/joeydtaylor/steeze-core/pkg/core/transform"
 )
 
-// ---- Typed publish surface (no dependency on hermes) ----
-
-type typedPublisher struct {
-	mu         sync.RWMutex
-	submitters map[string]func(context.Context, any) error
-}
-
-// Publish uses (or lazily builds) a submitter for the given type.
-func (tp *typedPublisher) Publish(ctx context.Context, topic, typeName string, v any, headers map[string]string) error {
-	// Fast path?
-	tp.mu.RLock()
-	fn, ok := tp.submitters[typeName]
-	tp.mu.RUnlock()
-	if ok {
-		return fn(ctx, v)
-	}
-
-	// Build lazily (Fx init-order safe)
-	tp.mu.Lock()
-	defer tp.mu.Unlock()
-	if fn2, ok2 := tp.submitters[typeName]; ok2 {
-		return fn2(ctx, v)
-	}
-	mk := pubReg[typeName]
-	if mk == nil {
-		return fmt.Errorf("typed publisher: no submitter for %q", typeName)
-	}
-	sf, err := mk(ctx)
-	if err != nil {
-		return fmt.Errorf("typed publisher: build %q: %w", typeName, err)
-	}
-	if tp.submitters == nil {
-		tp.submitters = map[string]func(context.Context, any) error{}
-	}
-	tp.submitters[typeName] = sf
-	return sf(ctx, v)
-}
-
 // ---- Registries ----
 
 var (
@@ -72,7 +33,8 @@ func EnableBuilderType[T any](typeName string) {
 
 	// Publisher factory
 	if _, exists := pubReg[typeName]; !exists {
-		pubReg[typeName] = func(ctx context.Context) (func(context.Context, any) error, error) {
+		// inside EnableBuilderType[T any](typeName string)
+		pubReg[typeName] = func(_ context.Context) (func(context.Context, any) error, error) {
 			// If no targets, be a no-op so router can still run.
 			if strings.TrimSpace(os.Getenv("ELECTRICIAN_TARGET")) == "" {
 				return func(context.Context, any) error { return nil }, nil
@@ -108,10 +70,10 @@ func EnableBuilderType[T any](typeName string) {
 			oauthEnabled := oauthIssuer != "" && oauthClientID != "" && oauthSecret != ""
 
 			logger := builder.NewLogger(builder.LoggerWithDevelopment(true))
-			ctx = context.Background()
+			bg := context.Background() // don't tie long-lived components to request ctx
 
 			// Wire[T]
-			wire := builder.NewWire[T](ctx, builder.WireWithLogger[T](logger))
+			wire := builder.NewWire[T](bg, builder.WireWithLogger[T](logger))
 
 			// Options
 			perf := builder.NewPerformanceOptions(useSnappy, builder.COMPRESS_SNAPPY)
@@ -143,7 +105,7 @@ func EnableBuilderType[T any](typeName string) {
 				)
 
 				relay := builder.NewForwardRelay[T](
-					ctx,
+					bg,
 					builder.ForwardRelayWithLogger[T](logger),
 					builder.ForwardRelayWithTarget[T](targets...),
 					builder.ForwardRelayWithPerformanceOptions[T](perf),
@@ -157,7 +119,7 @@ func EnableBuilderType[T any](typeName string) {
 				start = relay.Start
 			} else {
 				relay := builder.NewForwardRelay[T](
-					ctx,
+					bg,
 					builder.ForwardRelayWithLogger[T](logger),
 					builder.ForwardRelayWithTarget[T](targets...),
 					builder.ForwardRelayWithPerformanceOptions[T](perf),
@@ -169,10 +131,10 @@ func EnableBuilderType[T any](typeName string) {
 				start = relay.Start
 			}
 
-			if err := wire.Start(ctx); err != nil {
+			if err := wire.Start(bg); err != nil {
 				return nil, fmt.Errorf("wire start: %w", err)
 			}
-			if err := start(ctx); err != nil {
+			if err := start(bg); err != nil {
 				return nil, fmt.Errorf("relay start: %w", err)
 			}
 
@@ -210,18 +172,6 @@ func EnableBuilderType[T any](typeName string) {
 			return StartReceiverForwardFromEnv[T](ctx, address, buffer, fns...)
 		}
 	}
-}
-
-// NewTypedPublisherFromEnv returns a publisher instance with lazy builders.
-// In server wiring, expose it to Fx as hermes.TypedPublisher using fx.As.
-func NewTypedPublisherFromEnv() (*typedPublisher, error) {
-	// If no targets configured, return nil so the router falls back to byte-level publish.
-	if strings.TrimSpace(os.Getenv("ELECTRICIAN_TARGET")) == "" {
-		return nil, nil
-	}
-	return &typedPublisher{
-		submitters: map[string]func(context.Context, any) error{},
-	}, nil
 }
 
 // StartReceiverForwardFromEnvByName is used by server.go to start receivers generically.

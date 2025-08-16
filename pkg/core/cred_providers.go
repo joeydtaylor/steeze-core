@@ -1,4 +1,4 @@
-// core/cred_providers.go
+// pkg/core/cred_providers.go
 package core
 
 import (
